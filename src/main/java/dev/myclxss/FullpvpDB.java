@@ -25,6 +25,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
     private MongoClient mongoClient;
     private MongoDatabase database;
     private MongoCollection<Document> asesinatosCollection;
+    private MongoCollection<Document> muertesCollection;
 
     @Override
     public void onEnable() {
@@ -35,6 +36,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
 
         database = mongoClient.getDatabase("fullpvpdb");
         asesinatosCollection = database.getCollection("asesinatos");
+        muertesCollection = database.getCollection("muertes");
 
         // Registrar eventos y comando
         getServer().getPluginManager().registerEvents(this, this);
@@ -58,6 +60,24 @@ public class FullpvpDB extends JavaPlugin implements Listener {
         Player player = event.getEntity();
         Player killer = player.getKiller();
 
+        if (player != null) {
+            String playerName = player.getName();
+
+            // Buscar el documento del killer en la colección
+            Document filtro2 = new Document("jugador", playerName);
+            Document muerteDocumeto = muertesCollection.find(filtro2).first();
+
+            if (muerteDocumeto == null) {
+                // Si no existe, crear un nuevo documento
+                muerteDocumeto = new Document("jugador", playerName).append("muertes", 1);
+                muertesCollection.insertOne(muerteDocumeto);
+            } else {
+                int muertes = muerteDocumeto.getInteger("muertes");
+                muerteDocumeto.put("muertes", muertes + 1);
+                muertesCollection.replaceOne(filtro2, muerteDocumeto);
+            }
+        }
+
         if (killer != null) {
             String killerName = killer.getName();
 
@@ -78,7 +98,6 @@ public class FullpvpDB extends JavaPlugin implements Listener {
             }
         }
     }
-
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("stats")) {
@@ -90,9 +109,13 @@ public class FullpvpDB extends JavaPlugin implements Listener {
                 Document filtro = new Document("jugador", playerName);
                 Document jugadorDocumento = asesinatosCollection.find(filtro).first();
 
-                if (jugadorDocumento != null) {
+                Document filtro2 = new Document("jugador", playerName);
+                Document jugadorDocumento2 = muertesCollection.find(filtro2).first();
 
-                    int asesinatos = jugadorDocumento.getInteger("asesinatos");
+                // Verificar si alguno de los documentos no es nulo
+                if (jugadorDocumento != null || jugadorDocumento2 != null) {
+                    int asesinatos = jugadorDocumento != null ? jugadorDocumento.getInteger("asesinatos") : 0;
+                    int muertes = jugadorDocumento2 != null ? jugadorDocumento2.getInteger("muertes") : 0;
 
                     player.sendMessage(Color.set("&r"));
                     player.sendMessage(Color.set("&r"));
@@ -101,13 +124,13 @@ public class FullpvpDB extends JavaPlugin implements Listener {
                     player.sendMessage(Color.set("&e⁕ &8| &6&lTus Estadisticas"));
                     player.sendMessage(Color.set("&r"));
                     player.sendMessage(Color.set("&e⁕ &8| &fAsesinatos:" + " " + ChatColor.YELLOW + asesinatos));
+                    player.sendMessage(Color.set("&e⁕ &8| &fMuertes:" + " " + ChatColor.YELLOW + muertes));
                     player.sendMessage(Color.set("&r"));
                     player.sendMessage(Color.set("&7&m------------------------------"));
                     player.sendMessage(Color.set("&r"));
                     player.sendMessage(Color.set("&r"));
 
                 } else {
-
                     player.sendMessage("No tienes datos registrados.");
 
                 }
