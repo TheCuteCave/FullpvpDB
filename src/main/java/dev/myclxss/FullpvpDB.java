@@ -5,12 +5,16 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import dev.myclxss.components.Board;
 import dev.myclxss.components.Color;
+import me.clip.placeholderapi.PlaceholderAPI;
 
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.bson.Document;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -18,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class FullpvpDB extends JavaPlugin implements Listener {
@@ -47,6 +52,12 @@ public class FullpvpDB extends JavaPlugin implements Listener {
         Logger logger = Logger.getLogger("org.mongodb.driver");
 
         logger.setLevel(Level.OFF);
+
+        try {
+            scoreboardTask();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -100,6 +111,69 @@ public class FullpvpDB extends JavaPlugin implements Listener {
             }
         }
     }
+
+    public void createScoreboard(Player player) {
+        Board helper = Board.createScore(player);
+        String sbtitle = API.getInstance().getScoreboard().getString("SCOREBOARD.TITLE");
+
+        helper.setTitle(PlaceholderAPI.setPlaceholders(player, sbtitle));
+
+        List<String> list = API.getInstance().getScoreboard().getStringList("SCOREBOARD.LINES");
+
+        // Obtener el número de asesinatos y muertes del jugador
+        int asesinatos = getAsesinatos(player.getName());
+        int muertes = getMuertes(player.getName());
+
+        int index = 15;
+
+        for (int i = 0; i < list.size(); i++) {
+            String lineText = list.get(i);
+            lineText = PlaceholderAPI.setPlaceholders(player, lineText);
+
+            // Puedes usar placeholders personalizados para asesinatos y muertes
+            lineText = lineText.replace("%asesinatos%", String.valueOf(asesinatos));
+            lineText = lineText.replace("%muertes%", String.valueOf(muertes));
+
+            helper.setSlot(index, lineText);
+            index--;
+        }
+    }
+
+    public void updateScoreboard(Player player) {
+        if (Board.hasScore(player)) {
+            Board helper = Board.getByPlayer(player);
+            String sbtitle = API.getInstance().getScoreboard().getString("SCOREBOARD.TITLE");
+            helper.setTitle(PlaceholderAPI.setPlaceholders(player, sbtitle));
+
+            List<String> list = API.getInstance().getScoreboard().getStringList("SCOREBOARD.LINES");
+
+            // Obtener el número de asesinatos y muertes del jugador
+            int asesinatos = getAsesinatos(player.getName());
+            int muertes = getMuertes(player.getName());
+
+            int index = 15;
+
+            for (int i = 0; i < list.size(); i++) {
+                String lineText = list.get(i);
+                lineText = PlaceholderAPI.setPlaceholders(player, lineText);
+
+                // Puedes usar placeholders personalizados para asesinatos y muertes
+                lineText = lineText.replace("%asesinatos%", String.valueOf(asesinatos));
+                lineText = lineText.replace("%muertes%", String.valueOf(muertes));
+
+                helper.setSlot(index, lineText);
+                index--;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        this.createScoreboard(player);
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("stats")) {
@@ -166,5 +240,14 @@ public class FullpvpDB extends JavaPlugin implements Listener {
         }
 
         return 0;
+    }
+
+    public void scoreboardTask() {
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                this.updateScoreboard(player);
+
+            }
+        }, 0, 20);
     }
 }
