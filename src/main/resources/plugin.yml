@@ -1,0 +1,7 @@
+name: FullpvpDB
+version: '${project.version}'
+main: dev.myclxss.FullpvpDB
+
+commands:
+  stats:
+    description: asd
