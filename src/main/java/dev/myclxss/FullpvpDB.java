@@ -29,6 +29,8 @@ public class FullpvpDB extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+
+        new API(this);
         // Conectar a MongoDB usando una URI
         String mongoURI = "mongodb+srv://myclxss:anhuar2004@cluster0.lpdiqzf.mongodb.net/";
         MongoClientURI uri = new MongoClientURI(mongoURI);
@@ -140,5 +142,29 @@ public class FullpvpDB extends JavaPlugin implements Listener {
             return true;
         }
         return false;
+    }
+
+    // Obtener el número de asesinatos de un jugador desde MongoDB
+    public int getAsesinatos(String playerName) {
+        Document filtro = new Document("jugador", playerName);
+        Document asesinatosDocumento = asesinatosCollection.find(filtro).first();
+
+        if (asesinatosDocumento != null) {
+            return asesinatosDocumento.getInteger("asesinatos");
+        }
+
+        return 0;
+    }
+
+    // Obtener el número de muertes de un jugador desde MongoDB
+    public int getMuertes(String playerName) {
+        Document filtro = new Document("jugador", playerName);
+        Document muertesDocumento = muertesCollection.find(filtro).first();
+
+        if (muertesDocumento != null) {
+            return muertesDocumento.getInteger("muertes");
+        }
+
+        return 0;
     }
 }

@@ -1,0 +1,6 @@
+SCOREBOARD:
+  TITLE: "&aEstadísticas"
+  LINES:
+    - "&eAsesinatos: %asesinatos%"
+    - "&cMuertes: %muertes%"
+    - "&bOtra Línea: %placeholder_otra_linea%"
