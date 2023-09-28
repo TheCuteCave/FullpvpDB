@@ -4,6 +4,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.UpdateOptions;
 
 import dev.myclxss.components.Board;
 import dev.myclxss.components.Color;
@@ -16,6 +17,7 @@ import java.util.logging.Logger;
 import org.bson.Document;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -23,6 +25,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class FullpvpDB extends JavaPlugin implements Listener {
@@ -31,6 +34,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
     private MongoDatabase database;
     private MongoCollection<Document> asesinatosCollection;
     private MongoCollection<Document> muertesCollection;
+    private MongoCollection<Document> killstreakCollection;
 
     @Override
     public void onEnable() {
@@ -44,6 +48,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
         database = mongoClient.getDatabase("fullpvpdb");
         asesinatosCollection = database.getCollection("asesinatos");
         muertesCollection = database.getCollection("muertes");
+        killstreakCollection = database.getCollection("killstreak");
 
         // Registrar eventos y comando
         getServer().getPluginManager().registerEvents(this, this);
@@ -108,6 +113,20 @@ public class FullpvpDB extends JavaPlugin implements Listener {
                 int asesinatos = killerDocumento.getInteger("asesinatos");
                 killerDocumento.put("asesinatos", asesinatos + 1);
                 asesinatosCollection.replaceOne(filtro, killerDocumento);
+
+                // Actualiza la killstreak del jugador asesino
+                int currentKillStreak = getKillStreak(killer) + 1;
+                updateKillStreak(killer, currentKillStreak);
+
+                // Otorga recompensas según la killstreak
+                if (currentKillStreak == 5) {
+                    killer.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE));
+                } else if (currentKillStreak == 10) {
+                    killer.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD));
+                } else {
+                    // Restablece la killstreak del jugador muerto a 0
+                    updateKillStreak(player, 0);
+                }
             }
         }
     }
@@ -123,6 +142,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
         // Obtener el número de asesinatos y muertes del jugador
         int asesinatos = getAsesinatos(player.getName());
         int muertes = getMuertes(player.getName());
+        int currentKillStreak = getKillStreak(player.getPlayer());
 
         int index = 15;
 
@@ -133,6 +153,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
             // Puedes usar placeholders personalizados para asesinatos y muertes
             lineText = lineText.replace("%asesinatos%", String.valueOf(asesinatos));
             lineText = lineText.replace("%muertes%", String.valueOf(muertes));
+            lineText = lineText.replace("%killstreak%", String.valueOf(currentKillStreak));
 
             helper.setSlot(index, lineText);
             index--;
@@ -150,6 +171,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
             // Obtener el número de asesinatos y muertes del jugador
             int asesinatos = getAsesinatos(player.getName());
             int muertes = getMuertes(player.getName());
+            int currentKillStreak = getKillStreak(player.getPlayer());
 
             int index = 15;
 
@@ -160,6 +182,7 @@ public class FullpvpDB extends JavaPlugin implements Listener {
                 // Puedes usar placeholders personalizados para asesinatos y muertes
                 lineText = lineText.replace("%asesinatos%", String.valueOf(asesinatos));
                 lineText = lineText.replace("%muertes%", String.valueOf(muertes));
+                lineText = lineText.replace("%killstreak%", String.valueOf(currentKillStreak));
 
                 helper.setSlot(index, lineText);
                 index--;
@@ -208,12 +231,8 @@ public class FullpvpDB extends JavaPlugin implements Listener {
 
                 } else {
                     player.sendMessage("No tienes datos registrados.");
-
                 }
-            } else {
-                sender.sendMessage("Este comando solo se puede usar como jugador.");
             }
-            return true;
         }
         return false;
     }
@@ -249,5 +268,24 @@ public class FullpvpDB extends JavaPlugin implements Listener {
 
             }
         }, 0, 20);
+    }
+
+    private int getKillStreak(Player player) {
+        // Consulta MongoDB para obtener la killstreak actual del jugador
+        Document query = new Document("name", player.getName());
+        Document result = killstreakCollection.find(query).first();
+
+        if (result != null) {
+            return result.getInteger("killStreak", 0);
+        }
+
+        return 0;
+    }
+
+    private void updateKillStreak(Player player, int killStreak) {
+        // Actualiza la killstreak del jugador en MongoDB
+        Document query = new Document("name", player.getName());
+        Document update = new Document("$set", new Document("killStreak", killStreak));
+        killstreakCollection.updateOne(query, update, new UpdateOptions().upsert(true));
     }
 }

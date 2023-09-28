@@ -1,6 +1,14 @@
 SCOREBOARD:
-  TITLE: "&aEstadísticas"
+  TITLE: "&6&lFULLPVP"
   LINES:
-    - "&eAsesinatos: %asesinatos%"
-    - "&cMuertes: %muertes%"
-    - "&bOtra Línea: %placeholder_otra_linea%"
+    - "&8&m--------------------------------"
+    - "&r"
+    - "&e⁕ &8| &fNick: &e%player_name%"
+    - "&e⁕ &8| &fRango:"
+    - "&r"
+    - "&e⁕ &8| &fAsesinatos: &e%asesinatos%"
+    - "&e⁕ &8| &fMuertes: &e%muertes%"
+    - "&e⁕ &8| &fKillStreak: &e%killstreak%"
+    - "&r"
+    - "&7%oplay.fullpvp.net"
+    - "&8&m--------------------------------"
